@@ -1,8 +1,41 @@
 <?php
 require_once "include/config.php";
 require_once "include/session.php";
-
-
+$error = '';
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit'])) {
+    $email = ($_POST['email']);
+    $password = ($_POST['password']);
+    if (empty($email)) {
+        $error .= '<p class = "error text-danger">Mohon masukkan alamat email.</p>';
+    }
+    if (empty($password)) {
+        $error .= '<p class = "error text-danger">Mohon masukkan password.</p>';
+    }
+    if (empty($error)) {
+        if ($query = $conn->prepare("SELECT * FROM users WHERE email = ?")) {
+            $query->bind_param('s', $email);
+            $query->execute();
+            $result = $query->get_result();
+            if ($result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                if (password_verify($password, $row['password'])) {
+                    $_SESSION["userid"] = $row['id'];
+                    $_SESSION["user"] = $row;
+                    header("location: welcome.php");
+                    exit;
+                } else {
+                    $error .= '<p class="text-danger error">Password salah.</p>';
+                }
+            } else {
+                $error .= '<p class="text-danger error">Email tidak terdaftar.</p>';
+            }
+            $query->close();
+        } else {
+            $error .= '<p class="text-danger error">Terjadi kesalahan pada query.</p>';
+        }
+    }
+    mysqli_close($conn);
+}
 ?>
 
 <!doctype html>
@@ -28,7 +61,7 @@ require_once "include/session.php";
                     <form action="" method="post">
 
                         <div class="form-group mb-3">
-                            <label for="email" class="col-form-label">Alamat Email </label> 
+                            <label for="email" class="col-form-label">Alamat Email </label>
                             <input type="email" name="email" class="form-control" placeholder="Masukkan alamat email" required>
                         </div>
 
@@ -38,7 +71,7 @@ require_once "include/session.php";
                         </div>
 
                         <div class="form-group mb-3">
-                            <input class="btn btn-success fw-bold" type="submit" value="Simpan" name="submit"> 
+                            <input class="btn btn-success fw-bold" type="submit" value="Simpan" name="submit">
                         </div>
                         <p>Belum memiliki akun? <a href="registration.php">Registrasi disini</a>.</p>
                     </form>
